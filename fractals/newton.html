@@ -1,0 +1,129 @@
+<!-- fractals/newton.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton's Fractals - Fractal Explorer</title>
+    <!-- Link to the updated styles.css in the fractals folder -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <!-- CodeMirror Theme (Material Darker) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css">
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Newton's Fractals</h1>
+    </header>
+    <div class="container">
+        <!-- Sidebar for Code Editor -->
+        <div class="sidebar" id="editor-sidebar">
+            <button class="collapse-button" id="collapse-editor">←</button>
+            <div class="editor-panel">
+                <h2>Shader Editor</h2>
+                <textarea id="newton-shader">
+/* Initialize Newton's Fractal shader code here */
+precision highp float;
+
+uniform vec2 resolution;
+uniform float zoom;
+uniform vec2 offset;
+uniform float maxIterations;
+
+vec3 computeNewtonFractal(vec2 c) {
+    // Convert screen coordinates to complex number
+    float x = (c.x - resolution.x / 2.0) / (0.5 * zoom * resolution.x) + offset.x;
+    float y = (c.y - resolution.y / 2.0) / (0.5 * zoom * resolution.y) + offset.y;
+    vec2 z = vec2(x, y);
+    float iter = 0.0;
+
+    // Iterate using Newton-Raphson method for z^3 - 1 = 0
+    for(int i = 0; i < 1000; i++) {
+        if(iter >= maxIterations) break;
+
+        // f(z) = z^3 - 1
+        // f'(z) = 3z^2
+        float x2 = z.x * z.x;
+        float y2 = z.y * z.y;
+        float xy = z.x * z.y;
+
+        // Compute z^3
+        vec2 z3 = vec2(
+            z.x * (x2 - y2) - z.y * (2.0 * z.x * z.y),
+            z.y * (x2 - y2) + z.x * (2.0 * z.x * z.y)
+        );
+
+        // f(z) = z^3 - 1
+        vec2 f = z3 - vec2(1.0, 0.0);
+
+        // f'(z) = 3z^2
+        vec2 f_prime = vec2(
+            3.0 * (z.x * z.x - z.y * z.y),
+            6.0 * z.x * z.y
+        );
+
+        // Newton-Raphson step: z = z - f(z)/f'(z)
+        float denom = f_prime.x * f_prime.x + f_prime.y * f_prime.y;
+        z -= f / denom;
+
+        // Check convergence to any of the three roots
+        float distance1 = length(z - vec2(1.0, 0.0));
+        float distance2 = length(z - vec2(-0.5, 0.8660)); // (-1 + sqrt(3)i)/2
+        float distance3 = length(z - vec2(-0.5, -0.8660)); // (-1 - sqrt(3)i)/2
+
+        if(distance1 < 0.001 || distance2 < 0.001 || distance3 < 0.001) break;
+
+        iter += 1.0;
+    }
+
+    // Assign colors based on convergence
+    if(length(z - vec2(1.0, 0.0)) < 0.001) {
+        return vec3(1.0, 0.0, 0.0); // Red
+    } else if(length(z - vec2(-0.5, 0.8660)) < 0.001) {
+        return vec3(0.0, 1.0, 0.0); // Green
+    } else if(length(z - vec2(-0.5, -0.8660)) < 0.001) {
+        return vec3(0.0, 0.0, 1.0); // Blue
+    } else {
+        return vec3(0.0, 0.0, 0.0); // Black
+    }
+}
+
+void main() {
+    vec3 color = computeNewtonFractal(gl_FragCoord.xy);
+    gl_FragColor = vec4(color, 1.0);
+}
+                </textarea>
+                <button class="run-shader" id="run-newton">Run Shader</button>
+            </div>
+        </div>
+
+        <!-- Main Area for Fractal Visualization -->
+        <div class="main-content">
+            <div class="preview-panel">
+                <div id="newton-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <button id="back-button">Back to Menu</button>
+        <p>&copy; 2025 Samuel Girma Metaferia. All rights reserved.</p>
+    </footer>
+
+    <!-- CodeMirror JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+    <!-- Shared Script -->
+    <script src="script.js"></script>
+    <!-- JavaScript for Newton's Fractal -->
+    <script src="newton.js"></script>
+</body>
+
+</html>

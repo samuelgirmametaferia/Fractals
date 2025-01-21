@@ -1,0 +1,220 @@
+<!-- fractals/mandelbrot.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Set - Fractal Explorer</title>
+    <!-- Link to your existing styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js CSS for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+
+    <!-- SweetAlert2 CSS for custom popups -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <!-- Prism.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <!-- Include additional Prism.js languages if needed -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-glsl.min.js"></script>
+
+    <!-- SweetAlert2 JS for custom popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Monaco Editor CSS -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs/editor/editor.main.min.css">
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Mandelbrot Set</h1>
+        <!-- Info Button -->
+        <button id="info-button">How It Works</button>
+    </header>
+    <div class="container">
+        <!-- Sidebar for Code Editor -->
+        <div class="sidebar" id="editor-sidebar">
+            <button class="collapse-button" id="collapse-editor">←</button>
+            <div class="editor-panel">
+                <h2>Shader Editor</h2>
+                <!-- Container for Monaco Editor -->
+                <div id="mandelbrot-editor" style="height: 300px; border: 1px solid #ccc;"></div>
+                <button class="run-shader" id="run-mandelbrot">Run Shader</button>
+            </div>
+        </div>
+
+        <!-- Main Area for Fractal Visualization -->
+        <div class="main-content">
+            <div class="preview-panel">
+                <div id="mandelbrot-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <button id="back-button">Back to Menu</button>
+        <p>&copy; 2025 Samuel Girma Metaferia. All rights reserved.</p>
+    </footer>
+
+    <!-- Monaco Editor JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs/loader.min.js"></script>
+
+    <!-- Shared Script -->
+    <script src="script.js"></script>
+    <!-- JavaScript for Mandelbrot Set -->
+    <script src="mandelbrot.js"></script>
+
+    <!-- Popup Explanations and Initialization -->
+    <script>
+        // Function to show custom popups using SweetAlert2
+        function showPopup(title, text, icon = 'info') {
+            Swal.fire({
+                title: title,
+                html: text,
+                icon: icon,
+                confirmButtonText: 'OK'
+            });
+        }
+
+        // Function to display the information pop-up
+        function showInfoPopup() {
+            Swal.fire({
+                title: 'Welcome to the Mandelbrot Set Explorer!',
+                html: `
+                    <p>This tool allows you to explore the fascinating world of the Mandelbrot Set, a famous fractal in mathematics.</p>
+                    <h3>Features:</h3>
+                    <ul style="text-align: left;">
+                        <li><strong>Panning:</strong> Click and drag to move around the fractal.</li>
+                        <li><strong>Zooming:</strong> Use your mouse scroll or pinch gestures on touch devices to zoom in and out.</li>
+                        <li><strong>Shader Editor:</strong> Modify the GLSL shader code in real-time to see how changes affect the fractal.</li>
+                        <li><strong>Colored Syntax Highlighting:</strong> The shader editor provides syntax highlighting for easier code readability.</li>
+                    </ul>
+                    <h3>How to Use:</h3>
+                    <ol style="text-align: left;">
+                        <li>Navigate through the fractal using panning and zooming controls.</li>
+                        <li>Edit the shader code in the editor to customize the appearance of the Mandelbrot Set.</li>
+                        <li>Click the "Run Shader" button to apply your changes.</li>
+                    </ol>
+                    <p>Enjoy exploring the intricate patterns of the Mandelbrot Set!</p>
+                `,
+                icon: 'info',
+                confirmButtonText: 'Get Started',
+                width: '600px'
+            });
+        }
+
+        // Initialize Monaco Editor
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs' }});
+        require(['vs/editor/editor.main'], function () {
+            window.editor = monaco.editor.create(document.getElementById('mandelbrot-editor'), {
+                value: `/* Initialize Mandelbrot Set shader code here */
+precision highp float;
+
+uniform vec2 resolution;
+uniform float zoom;
+uniform vec2 offset;
+uniform int maxIterations;
+
+vec3 computeMandelbrot(vec2 c) {
+    vec2 z = vec2(0.0, 0.0);
+    int iter;
+    for(iter = 0; iter < maxIterations; iter++) {
+        // z = z^2 + c
+        float x = (z.x * z.x - z.y * z.y) + c.x;
+        float y = (2.0 * z.x * z.y) + c.y;
+
+        if((x * x + y * y) > 4.0) break; // Escape condition
+        z = vec2(x, y);
+    }
+
+    // Color mapping based on the number of iterations
+    float normIter = float(iter) / float(maxIterations);
+    return vec3(normIter, 0.5 * normIter, 1.0 - normIter);
+}
+
+void main() {
+    // Convert screen coordinates to complex number with zoom and offset
+    vec2 c;
+    c.x = (gl_FragCoord.x - resolution.x / 2.0) / (0.5 * zoom * resolution.x) + offset.x;
+    c.y = (gl_FragCoord.y - resolution.y / 2.0) / (0.5 * zoom * resolution.y) + offset.y;
+
+    vec3 color = computeMandelbrot(c);
+    gl_FragColor = vec4(color, 1.0);
+}
+`,
+                language: 'glsl', // Specify GLSL for shader syntax highlighting
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+        });
+
+        // Show welcome popup when the page loads
+        window.onload = function () {
+            showInfoPopup();
+        };
+
+        // Handle "Run Shader" button click
+        document.getElementById('run-mandelbrot').addEventListener('click', function () {
+            showPopup('Compiling and running the Mandelbrot shader...', '', 'info');
+            try {
+                // Initialize Three.js scene
+                const scene = new THREE.Scene();
+                const camera = new THREE.Camera();
+                camera.position.z = 1;
+
+                const renderer = new THREE.WebGLRenderer();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                const container = document.getElementById('mandelbrot-container');
+                container.innerHTML = ''; // Clear previous render
+                container.appendChild(renderer.domElement);
+
+                // Define the shader material with user-defined shader code
+                const fragmentShaderCode = window.editor.getValue();
+
+                // Validate shader code
+                if (!fragmentShaderCode.includes('void main()')) {
+                    throw new Error('Shader code must contain a main function.');
+                }
+
+                const material = new THREE.ShaderMaterial({
+                    fragmentShader: fragmentShaderCode,
+                    uniforms: {
+                        resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                        zoom: { value: 1.0 },
+                        offset: { value: new THREE.Vector2(0.0, 0.0) },
+                        maxIterations: { value: 1000 }
+                    }
+                });
+
+                // Create a plane geometry and apply the shader material
+                const geometry = new THREE.PlaneGeometry(2, 2);
+                const mesh = new THREE.Mesh(geometry, material);
+                scene.add(mesh);
+
+                // Render the scene
+                renderer.render(scene, camera);
+
+                showPopup('Shader compiled and fractal rendered successfully!', '', 'success');
+            } catch (error) {
+                showPopup('Error initializing shader: ' + error.message, '', 'error');
+                console.error(error);
+            }
+        });
+
+        // Handle "Back to Menu" button click
+        document.getElementById('back-button').addEventListener('click', function () {
+            showPopup('Returning to the main menu...', '', 'info');
+            // Add navigation logic here, e.g., window.location.href = 'menu.html';
+        });
+
+        // Attach event listener to the info button
+        document.getElementById('info-button').addEventListener('click', showInfoPopup);
+    </script>
+</body>
+
+</html>
